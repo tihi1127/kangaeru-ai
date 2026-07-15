@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>かんがえるAI Rev 0.5 AI</title>
+<style>
+/* =====================================================
+   かんがえるAI Rev 0.4 Design
+   「ひだまりロボット」初期インターフェース案ベース
+   - CSSを全面整理（旧Rev上書きCSSを統合）
+   - JavaScriptの動作・ID・状態クラスは変更なし
+   ===================================================== */
+
+/* ---------- 1. 変数・基本 ---------- */
+:root{
+  --cream:#fff8e1;
+  --paper:#fffdf6;
+  --yellow:#ffe36e;
+  --sun:#ffd94f;
+  --coral:#f2704a;
+  --coral-deep:#e05a36;
+  --teal:#0e6f6b;
+  --teal-deep:#0a5c5c;
+  --mint:#4fc4b2;
+  --aqua:#8ef0d8;
+  --ink:#5b4326;
+  --ink-soft:#8a6b3f;
+  --gold:#f0b429;
+  --line:#f0d896;
+  --shadow:#8a632522;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  margin:0;color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","BIZ UDGothic","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;
+  background:var(--cream);
+}
+button{font:inherit;cursor:pointer;color:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+
+/* ---------- 2. 画面全体・背景 ---------- */
+.app{
+  position:relative;min-height:100vh;min-height:100svh;
+  padding:16px 4vw 20px;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 50% 26%,#fffef8 0,#fff9dd 48%,transparent 75%),
+    linear-gradient(180deg,#fff6d2 0,#fffbe9 58%,#ffec91 100%);
+}
+.deco{position:absolute;pointer-events:none}
+
+/* 太陽 */
+.sun{left:-70px;top:-70px;width:210px;height:210px;border-radius:50%;
+  background:radial-gradient(circle at 40% 40%,#ffe883,#ffd94f);
+  box-shadow:0 0 60px #ffd94f88}
+.ray{position:absolute;width:30px;height:9px;border-radius:9px;background:#f5a83a}
+.r1{left:222px;top:100px}
+.r2{left:206px;top:150px;transform:rotate(30deg)}
+.r3{left:176px;top:192px;transform:rotate(55deg)}
+
+/* 雲 */
+.cloud{width:130px;height:44px;border-radius:44px;background:#fffefa;
+  filter:drop-shadow(0 6px 6px #8a632518)}
+.cloud:before,.cloud:after{content:"";position:absolute;border-radius:50%;background:inherit;bottom:6px}
+.cloud:before{width:58px;height:58px;left:18px}
+.cloud:after{width:74px;height:66px;right:10px}
+.c1{left:4%;top:36%}
+.c2{right:3%;top:22%;transform:scale(.8)}
+
+/* 丘・地面 */
+.mound{border-radius:50%;background:#ffe15e}
+.m1{right:-14%;bottom:-26%;width:60vw;height:52vh;min-width:520px;background:#ffe066}
+.m2{left:-18%;bottom:-32%;width:50vw;height:44vh;min-width:420px;background:#ffe887}
+.ground{left:0;right:0;bottom:0;height:36px;background:linear-gradient(180deg,#ffe470,#ffdf5c)}
+
+/* しげみ */
+.bush{bottom:-6px;width:120px;height:78px;border-radius:60px 60px 0 0;background:#69b355}
+.bush:before,.bush:after{content:"";position:absolute;border-radius:50% 50% 0 0;background:#7cc264;bottom:0}
+.bush:before{width:86px;height:56px;left:-56px}
+.bush:after{width:74px;height:46px;right:-48px}
+.b1{left:6%}
+.b2{right:3%;transform:scale(.8)}
+
+/* はな */
+.flower{bottom:66px;width:15px;height:15px;border-radius:50%;background:#e85f28;z-index:1;
+  box-shadow:0 -15px 0 -2px #ff8b45,11px -11px 0 -2px #ff8b45,15px 0 0 -2px #ff8b45,11px 11px 0 -2px #ff8b45,
+  0 15px 0 -2px #ff8b45,-11px 11px 0 -2px #ff8b45,-15px 0 0 -2px #ff8b45,-11px -11px 0 -2px #ff8b45}
+.flower:after{content:"";position:absolute;left:6px;top:22px;width:5px;height:46px;border-radius:4px;background:#5da84e}
+.f1{left:13%}
+.tulip{bottom:62px;width:26px;height:30px;border-radius:50% 50% 42% 42%;background:#ffd23f;z-index:1}
+.tulip:before{content:"";position:absolute;left:10px;top:28px;width:5px;height:42px;border-radius:4px;background:#5da84e}
+.tulip:after{content:"";position:absolute;left:-26px;top:14px;width:22px;height:26px;border-radius:50% 50% 42% 42%;background:#ffc93a}
+.t1{right:9%}
+
+/* ---------- 3. ヘッダー ---------- */
+.top{position:relative;z-index:3;text-align:center}
+.top small{display:block;font-size:11px;font-weight:800;letter-spacing:.14em;color:#b39557}
+h1{margin:2px 0 0;font-size:clamp(40px,5.8vw,78px);line-height:1.08;letter-spacing:.02em;
+  display:flex;justify-content:center;flex-wrap:wrap;font-weight:900}
+h1 span{display:inline-block;
+  text-shadow:0 2px 0 #fff8d8,0 5px 0 currentColor;
+  filter:drop-shadow(0 6px 3px #9f701c30);
+  -webkit-text-stroke:1px #ffffff44}
+h1 span:nth-child(4n+1){color:#f39813}
+h1 span:nth-child(4n+2){color:#14978f}
+h1 span:nth-child(4n+3){color:#ff633f}
+h1 span:nth-child(4n){color:#f2a900}
+h1 span:nth-child(5){margin-right:.3em}
+.adult{position:absolute;right:0;top:0;z-index:5;min-height:44px;
+  border:2px solid #e5cd8a;border-radius:30px;background:#fffdf4;
+  padding:9px 16px;font-size:13px;font-weight:800;color:var(--ink-soft);
+  box-shadow:0 3px 0 #c9a24e40}
+
+/* ---------- 4. ステージ共通 ---------- */
+.stage{position:relative;z-index:2;max-width:1050px;margin:auto;min-height:600px;
+  display:grid;place-items:center}
+.screen{width:100%;text-align:center}
+.prompt{margin:14px 0 8px;font-size:clamp(26px,3.4vw,42px);font-weight:900;
+  letter-spacing:.1em;color:#6b4a23;text-shadow:0 2px 0 #fffdf0}
+
+/* ---------- 5. ホーム（マイク＋ロボット） ---------- */
+.hero{position:relative;display:flex;align-items:center;justify-content:center;gap:64px;min-height:430px}
+.mic{
+  position:relative;z-index:2;width:360px;max-width:40vw;aspect-ratio:1;
+  border:38px solid var(--coral);border-radius:50%;
+  background:radial-gradient(circle at 42% 30%,#fffef8,#fff5da);
+  box-shadow:0 18px 30px #a06a2e44,inset 0 6px 10px #fff,0 0 0 3px var(--coral-deep);
+  transition:transform .12s;animation:breathe 2.6s ease-in-out infinite;
+}
+.mic:hover{transform:scale(1.03)}
+.mic:active{transform:scale(.96)}
+.mic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0}
+.mic-symbol{position:relative;width:132px;height:168px;flex:none}
+.m-cap{position:absolute;left:50%;top:0;transform:translateX(-50%);width:74px;height:104px;border-radius:40px;
+  background:linear-gradient(90deg,var(--teal-deep),#177e79);box-shadow:inset 8px 0 #ffffff18}
+.m-u{position:absolute;left:50%;top:42px;transform:translateX(-50%);width:118px;height:86px;
+  border:13px solid var(--teal);border-top:0;border-radius:0 0 62px 62px}
+.m-stem{position:absolute;left:50%;top:128px;transform:translateX(-50%);width:13px;height:28px;background:var(--teal)}
+.m-base{position:absolute;left:50%;top:154px;transform:translateX(-50%);width:68px;height:13px;border-radius:8px;background:var(--teal)}
+.mic strong{display:block;font-size:19px;font-weight:900;color:var(--teal);letter-spacing:.08em}
+
+/* ---------- 6. ロボット ---------- */
+.robot{position:relative;width:240px;height:330px;flex:none;filter:drop-shadow(0 12px 10px #8a632533)}
+.antenna{position:absolute;left:116px;top:6px;width:7px;height:40px;background:var(--mint);border-radius:4px}
+.antenna:before{content:"";position:absolute;left:-8px;top:-14px;width:23px;height:23px;border-radius:50%;background:var(--mint)}
+.spark{position:absolute;left:-4px;top:78px;width:6px;height:20px;border-radius:5px;background:#f5a623;
+  transform:rotate(-34deg);box-shadow:22px -18px 0 #f5a623}
+.spark:before{content:"";position:absolute;left:-14px;top:24px;width:6px;height:16px;border-radius:5px;
+  background:#f5a623;transform:rotate(28deg)}
+.rhead{position:absolute;left:14px;top:36px;width:212px;height:152px;
+  background:linear-gradient(150deg,#fffef8,#f4ecd8);border-radius:56px;
+  box-shadow:0 4px 0 #e6dabd}
+.ear{position:absolute;top:92px;width:24px;height:48px;background:var(--mint)}
+.e-l{left:0;border-radius:16px 0 0 16px}
+.e-r{right:0;border-radius:0 16px 16px 0}
+.face{position:absolute;inset:19px 21px 27px;border-radius:40px;
+  background:linear-gradient(150deg,#10756f,var(--teal-deep));
+  display:flex;align-items:center;justify-content:center;gap:38px;
+  box-shadow:inset 0 -6px 14px #04303055}
+.eye{width:26px;height:15px;border-bottom:6px solid var(--aqua);border-radius:0 0 50% 50%;margin-top:-18px}
+.smile{position:absolute;left:50%;bottom:16px;width:40px;height:22px;transform:translateX(-50%);
+  background:var(--aqua);border-radius:4px 4px 40px 40px}
+.arm{position:absolute;width:24px;height:72px;background:linear-gradient(150deg,#fffef8,#f0e7d1);border-radius:16px}
+.arm:after{content:"";position:absolute;left:-3px;top:-16px;width:30px;height:30px;border-radius:50%;
+  background:#fffef8;box-shadow:inset -2px -3px 0 #e6dabd}
+.a-l{left:-2px;top:152px;transform:rotate(50deg);transform-origin:bottom center;animation:wave 2.4s ease-in-out infinite}
+.a-r{right:22px;top:196px;transform:rotate(-30deg)}
+.a-r:after{top:auto;bottom:-14px}
+.rbody{position:absolute;left:58px;top:182px;width:124px;height:108px;
+  background:linear-gradient(150deg,#fffef8,#f2e8d2);border-radius:44px 44px 38px 38px;
+  box-shadow:0 4px 0 #e6dabd}
+.heart{position:absolute;left:50%;top:32px;width:30px;height:27px;transform:translateX(-50%)}
+.heart:before,.heart:after{content:"";position:absolute;top:0;left:15px;width:15px;height:24px;
+  border-radius:15px 15px 0 0;background:#3fb3a3;transform:rotate(-45deg);transform-origin:0 100%}
+.heart:after{left:0;transform:rotate(45deg);transform-origin:100% 100%}
+.leg{position:absolute;top:284px;width:32px;height:34px;background:#fffef8;border-radius:10px 10px 4px 4px}
+.leg:after{content:"";position:absolute;left:-5px;bottom:-8px;width:42px;height:16px;border-radius:10px;
+  background:#f2e8d2;box-shadow:0 2px 0 #e6dabd}
+.lg-l{left:82px}
+.lg-r{left:132px}
+.robot.small{transform:scale(.44);transform-origin:top center;height:150px;margin:-6px auto -22px}
+.panel>.robot{margin:6px auto -4px;transform:scale(.62);transform-origin:top center;height:210px}
+
+/* ---------- 7. パネル・ボタン共通 ---------- */
+.panel{position:relative;max-width:780px;margin:auto;padding:30px 32px 32px;
+  border:3px solid var(--line);border-radius:38px;background:#fffdf6f2;
+  box-shadow:0 14px 30px var(--shadow)}
+.panel h2{margin:10px 0 16px;font-size:clamp(28px,3.4vw,38px);font-weight:900}
+.heard{font-size:clamp(24px,3vw,32px);font-weight:900;background:#fff0b2;border-radius:24px;padding:22px;line-height:1.4}
+.row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.btn{min-height:70px;border:0;border-radius:999px;padding:14px 30px;
+  font-size:22px;font-weight:900;line-height:1.25;
+  box-shadow:0 6px 0 #b7924c55;transition:transform .1s,box-shadow .1s}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 #b7924c55}
+.primary{background:linear-gradient(180deg,#128078,var(--teal));color:#fff}
+.coral{background:linear-gradient(180deg,#f97f57,var(--coral-deep));color:#fff}
+.secondary{border:3px solid #ecd18d;background:linear-gradient(180deg,#fffef8,#fff5db);color:var(--ink)}
+
+/* ---------- 8. 2択画面 ---------- */
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:6px}
+.card{text-align:left;border:4px solid #f2c24f;border-radius:32px;background:#fff;padding:20px;box-shadow:0 8px 0 #b98b3038}
+.card strong{font-size:28px}
+.card p{font-size:19px;background:#fff2bd;border-radius:16px;padding:12px}
+.card p:last-child{background:#e8f4db}
+.choice-card-static{position:relative;text-align:left;
+  border:4px solid #ecd18d;border-radius:32px;background:var(--paper);
+  padding:22px;box-shadow:0 8px 0 #b98b3030;
+  transition:transform .2s,border-color .2s,box-shadow .2s,background .2s}
+.choice-card-static .number{position:absolute;right:16px;top:14px;width:46px;height:46px;border-radius:50%;
+  display:grid;place-items:center;background:#efe3bd;color:#71552d;font-size:24px;font-weight:900}
+.choice-card-static strong{display:block;padding-right:52px;font-size:29px;line-height:1.3}
+.choice-card-static p{font-size:19px;line-height:1.5;background:#fff2bd;border-radius:16px;padding:12px;margin:12px 0 0}
+.choice-card-static p:last-child{background:#e8f4db}
+.choice-card-static.speaking{border-color:var(--coral);background:#fff8dc;transform:translateY(-6px);
+  box-shadow:0 12px 0 #f2704a4d,0 0 0 7px #f2704a1f}
+.choice-card-static.speaking .number{background:var(--coral);color:#fff}
+.choice-card-static.done{border-color:#65b59a;background:#f3fff7}
+.choice-card-static.done .number{background:#bfe6d4;color:#2b6b52}
+.speaking-label{min-height:42px;margin:8px auto 12px;padding:8px 20px;border-radius:22px;
+  display:inline-flex;align-items:center;gap:8px;background:#fff0b4;color:#78521e;font-size:20px;font-weight:900}
+.speaking-label.active:before{content:"🔊";animation:pulse .8s ease-in-out infinite alternate}
+.replay-choices{display:block;margin:0 auto 14px;min-height:56px;font-size:19px;padding:9px 24px}
+.choice-actions{margin:20px auto 4px;padding:20px;border:3px solid #e7c766;border-radius:30px;
+  background:#fffaf0;box-shadow:0 8px 20px #76521f26}
+.choice-actions h3{margin:0 0 14px;font-size:26px}
+.choose-buttons{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.choose-buttons .btn{width:100%;min-height:80px}
+
+/* ---------- 9. 下部共通ボタン・注意書き ---------- */
+.bottom{position:relative;z-index:3;display:flex;justify-content:center;gap:36px;margin-top:2px}
+.bottom button{min-width:250px;min-height:78px;border:0;border-radius:999px;
+  font-size:23px;font-weight:900;color:var(--ink);
+  background:linear-gradient(180deg,#fffef8,#fff4d8);
+  box-shadow:0 7px 0 #c9a24e50,0 12px 18px #80601d26}
+.bottom button:active{transform:translateY(4px);box-shadow:0 3px 0 #c9a24e50}
+.note{position:relative;z-index:3;margin:16px 0 0;text-align:center;
+  font-size:13px;font-weight:800;color:#7a6437}
+
+/* ---------- 10. 安全画面 ---------- */
+.safe{border-color:var(--coral)}
+.safe .prompt{letter-spacing:.02em}
+
+/* ---------- 11. アニメーション ---------- */
+@keyframes breathe{50%{box-shadow:0 22px 44px #a06a2e55,inset 0 6px 10px #fff,0 0 0 3px var(--coral-deep)}}
+@keyframes wave{0%,100%{transform:rotate(42deg)}50%{transform:rotate(64deg)}}
+@keyframes pulse{to{transform:scale(1.18)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* ---------- 12. PC中間サイズ ---------- */
+@media(max-width:980px){
+  .hero{gap:24px}
+  .mic{width:320px;border-width:32px}
+  .robot{transform:scale(.85);transform-origin:bottom center}
+}
+
+/* ---------- 13. 携帯縦画面（第一優先） ---------- */
+@media(max-width:720px){
+  body{overflow-x:hidden}
+  .app{padding:10px 12px 128px}
+  .sun{left:-56px;top:-56px;width:140px;height:140px}
+  .ray{width:20px;height:6px}
+  .r1{left:148px;top:64px}
+  .r2{left:136px;top:100px;transform:rotate(30deg)}
+  .r3{left:114px;top:130px;transform:rotate(55deg)}
+  .cloud{transform:scale(.6)}
+  .c1{left:-6%;top:24%}
+  .c2{right:-8%;top:30px}
+  .mound{opacity:.85}
+  .m1{min-width:300px;width:80vw;height:30vh;bottom:-12%;right:-24%}
+  .m2{display:none}
+  .bush{transform:scale(.62);transform-origin:bottom}
+  .b1{left:-4%}
+  .b2{right:-6%}
+  .flower,.tulip{display:none}
+  .top{padding-top:2px}
+  .top small{font-size:9px}
+  h1{flex-wrap:nowrap;white-space:nowrap;max-width:86vw;margin:24px auto 0;
+    font-size:clamp(24px,7.4vw,32px);letter-spacing:-.04em}
+  h1 span{text-shadow:0 1px 0 #fff8d8,0 3px 0 currentColor;filter:drop-shadow(0 3px 2px #9f701c2b)}
+  .adult{min-height:42px;padding:7px 12px;font-size:11px}
+  .stage{display:block;min-height:0;margin-top:6px}
+  .screen{padding-top:2px}
+  .prompt{margin:8px 0 12px;font-size:clamp(23px,6.6vw,30px);line-height:1.4;letter-spacing:.04em}
+  .hero{min-height:0;display:grid;grid-template-columns:1fr 112px;gap:0;align-items:end;padding:0 2px;margin-top:16px}
+  .mic{grid-column:1;width:min(290px,74vw);max-width:none;border-width:30px;margin:6px auto 0;
+    box-shadow:0 12px 22px #a06a2e44,inset 0 4px 8px #fff,0 0 0 3px var(--coral-deep)}
+  .mic{gap:6px}
+  .mic-symbol{transform:scale(.62);transform-origin:center;margin:-24px 0 -30px}
+  .mic strong{font-size:16px}
+  .hero>.robot{grid-column:2;width:240px;transform:scale(.5);transform-origin:left bottom;margin:0 0 -4px -10px;height:250px}
+  .panel{padding:20px 15px 22px;border-radius:28px;box-shadow:0 8px 20px var(--shadow)}
+  .panel h2{font-size:clamp(24px,6.8vw,31px);line-height:1.35;margin:6px 0 14px}
+  .panel>.robot{transform:scale(.44);height:155px;margin:0 auto 4px}
+  .robot.small{transform:scale(.36);height:130px;margin:-28px auto 0}
+  .heard{font-size:clamp(21px,5.8vw,27px);padding:16px;border-radius:20px}
+  .row{gap:11px}
+  .row .btn{flex:1;min-width:136px}
+  .btn{min-height:64px;padding:11px 16px;font-size:clamp(17px,4.8vw,21px)}
+  .choices{grid-template-columns:1fr;gap:14px}
+  .card{padding:15px;border-radius:24px}
+  .card strong{font-size:clamp(21px,6vw,26px)}
+  .card p{font-size:clamp(16px,4.4vw,19px);line-height:1.45;padding:10px;margin:9px 0 0}
+  .choice-card-static{padding:16px;border-radius:24px}
+  .choice-card-static strong{font-size:clamp(21px,6vw,26px)}
+  .choice-card-static p{font-size:clamp(16px,4.4vw,19px);padding:10px;margin:10px 0 0}
+  .choice-card-static .number{width:38px;height:38px;font-size:20px}
+  .speaking-label{font-size:17px;min-height:38px;margin:4px auto 10px}
+  .replay-choices{font-size:17px;min-height:54px;margin-bottom:12px}
+  .choice-actions{padding:14px 11px 16px;margin:16px 0 6px;border-radius:24px}
+  .choice-actions h3{font-size:22px}
+  .choose-buttons{grid-template-columns:1fr;gap:10px}
+  .choose-buttons .btn{min-height:68px}
+  .bottom{position:fixed;left:8px;right:8px;bottom:10px;z-index:20;gap:8px;margin:0;padding:8px;
+    border-radius:36px;background:#fff8deee;box-shadow:0 4px 18px #60481740;backdrop-filter:blur(8px)}
+  .bottom button{min-width:0;min-height:62px;flex:1;padding:8px 6px;border-radius:28px;font-size:17px;
+    box-shadow:0 4px 0 #c9a24e50}
+  .note{display:none}
+  .safe .prompt{font-size:19px!important;line-height:1.6}
+  .panel[style*="text-align:left"]{font-size:15px}
+  .panel[style*="text-align:left"] ul{padding-left:22px}
+  .panel[style*="text-align:left"] .row{display:grid;grid-template-columns:1fr}
+  .panel[style*="text-align:left"] .btn{width:100%}
+}
+
+/* ---------- 14. 小型携帯 ---------- */
+@media(max-width:390px){
+  h1{font-size:26px}
+  .hero{grid-template-columns:1fr 84px}
+  .mic{width:238px;border-width:24px}
+  .hero>.robot{transform:scale(.42);margin-right:-2px}
+  .bottom button{font-size:15px}
+  .panel{padding-left:11px;padding-right:11px}
+}
+</style>
+</head>
+<body><main class="app">
+<div class="deco sun"></div><div class="deco ray"></div>
+<div class="deco cloud c1"></div><div class="deco cloud c2"></div>
+<div class="deco mound m1"></div><div class="deco mound m2"></div>
+<div class="deco ground"></div>
+<div class="deco bush b1"></div><div class="deco bush b2"></div>
+<div class="deco flower f1"></div><div class="deco tulip t1"></div>
+<header class="top"><button id="adultBtn" class="adult" onclick="showParent()">おとな</button><small id="appLabel">かんがえるAI　Rev 0.5 AI</small><h1 aria-label="いっしょに かんがえよう"><span>い</span><span>っ</span><span>し</span><span>ょ</span><span>に</span><span>か</span><span>ん</span><span>が</span><span>え</span><span>よ</span><span>う</span></h1></header><section id="stage" class="stage"></section><nav class="bottom"><button id="repeatBtn" class="btn secondary" onclick="repeat()">↩️ もういちど</button><button class="btn secondary" onclick="toggleEnglish()">🌐 <span id="lang">English</span></button></nav><p id="safetyNote" class="note">AIも まちがえることが あるよ　・　さいごは じぶんで えらぼう</p></main>
+<script>
+//======= CONFIG（設定ブロック）ここだけ変更可 =======
+const APP_CONFIG={
+  GAS_URL:'ここにGASのウェブアプリURLを設定'  // 例: https://script.google.com/macros/s/XXXX/exec
+};
+//======= CONFIG ここまで（以下は変更禁止） =======
+
+const stage=document.getElementById('stage');let english=false,currentText='',recognition=null,currentScreen='home',choiceSpeechToken=0,aiToken=0,lastQuestion='';const normalJa='あした なにをして あそべばいい？',normalEn='What should I play tomorrow?';
+const DANGER_WORDS=['しにたい','ころす','くすり','じゅうしょ','でんわばんごう','hurt myself','kill','medicine','address','phone number'];
+const DEMO_IDEAS={source:'demo',ideas:[
+ {emoji:'🌳',title_ja:'こうえんで あそぶ',title_en:'Play outside',good_ja:'からだを たくさん うごかせるよ。',good_en:'You can move your body.',care_ja:'あめだと あそびにくいよ。',care_en:'Rain can make it hard.'},
+ {emoji:'🎨',title_ja:'おうちで あそぶ',title_en:'Draw at home',good_ja:'えや ブロックで あそべるよ。',good_en:'You can draw or play with blocks.',care_ja:'うごく じかんは すくないよ。',care_en:'You may move less.'}]};
+let currentIdeas=DEMO_IDEAS;
+const robot='<div class="robot"><i class="antenna"></i><i class="spark"></i><i class="ear e-l"></i><i class="ear e-r"></i><div class="rhead"><div class="face"><i class="eye"></i><i class="eye"></i><b class="smile"></b></div></div><i class="arm a-l"></i><i class="arm a-r"></i><div class="rbody"><b class="heart"></b></div><i class="leg lg-l"></i><i class="leg lg-r"></i></div>';
+function demoText(){return english?normalEn:normalJa}function bi(en,ja){return english?`${en}<br><small>${ja}</small>`:ja}
+function hasAI(){return typeof APP_CONFIG.GAS_URL==='string'&&APP_CONFIG.GAS_URL.indexOf('https://script.google.com')===0}
+function say(text){currentText=text;if(!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=english?'en-US':'ja-JP';u.rate=english?.78:1.0;u.pitch=1.08;speechSynthesis.speak(u)}
+function home(){choiceSpeechToken++;aiToken++;currentScreen='home';render(`<div class="screen"><h2 class="prompt">${english?'What do you want to talk about?<br>なにを はなしたい？':'きょうは なにを はなす？'}</h2><div class="hero"><button class="mic" onclick="listen(false)" aria-label="おして はなす"><div class="mic-symbol"><i class="m-u"></i><i class="m-cap"></i><i class="m-stem"></i><i class="m-base"></i></div><strong>${english?'Tap and talk<br>おして はなす':'おして はなす'}</strong></button>${robot}</div></div>`);currentText=english?'What do you want to talk about? なにを はなしたい？':'きょうは なにを はなす？'}
+function render(html){stage.innerHTML=html}
+function listen(reason){currentScreen='listening';render(`<div class="panel"><div style="font-size:80px">〰️🎤〰️</div><h2>${bi('I am listening.','きいているよ')}</h2><p class="prompt">${bi('Speak slowly.','ゆっくり はなしてね')}</p><div class="row"><button class="btn coral primary" onclick="stopListen(${reason})">${bi('■ Stop','■ おわり')}</button><button class="btn secondary" onclick="${reason?'finish()':'confirm(demoText())'}">${bi('Try the demo','デモで すすむ')}</button></div></div>`);currentText=english?'I am listening. Speak slowly.':'きいているよ。ゆっくり はなしてね。';const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return;try{recognition=new R();recognition.lang=english?'en-US':'ja-JP';recognition.interimResults=false;recognition.onresult=e=>{const t=e.results[0][0].transcript;if(reason)finish();else if(DANGER_WORDS.some(w=>t.toLowerCase().includes(w)))safe();else confirm(t)};recognition.onerror=()=>{};recognition.start()}catch(e){recognition=null}}
+function stopListen(reason){if(recognition)try{recognition.stop()}catch(e){};reason?finish():confirm(demoText())}
+function confirm(text){currentScreen='confirm';lastQuestion=text;render(`<div class="panel"><div class="robot small">${robot.replace('<div class="robot">','').replace(/<\/div>$/,'')}</div><h2>${bi('I heard this.','こう きこえたよ')}</h2><div class="heard">“${text}”</div><br><div class="row"><button class="btn primary" onclick="goChoices()">${bi('○ Yes','○ あってる')}</button><button class="btn secondary" onclick="listen(false)">${bi('↻ Again','↻ もういちど')}</button></div></div>`);say(english?'I heard this. '+text:'こう きこえたよ。'+text)}
+function thinking(){currentScreen='thinking';render(`<div class="panel"><div class="robot small">${robot.replace('<div class="robot">','').replace(/<\/div>$/,'')}</div><h2>${bi('Let me think...','かんがえて いるよ')}</h2><div class="speaking-label active">${bi('Please wait','ちょっと まってね')}</div></div>`);say(english?'Let me think. Please wait.':'かんがえて いるよ。ちょっと まってね。')}
+function goChoices(){
+ if(!hasAI()){currentIdeas=DEMO_IDEAS;choices();return}
+ thinking();
+ const token=++aiToken;
+ const ctrl=('AbortController'in window)?new AbortController():null;
+ const timer=setTimeout(function(){if(ctrl)ctrl.abort()},25000);
+ fetch(APP_CONFIG.GAS_URL,{method:'POST',body:JSON.stringify({question:lastQuestion}),signal:ctrl?ctrl.signal:undefined})
+ .then(function(r){return r.json()})
+ .then(function(d){clearTimeout(timer);if(token!==aiToken||currentScreen!=='thinking')return;
+   if(d&&d.danger){safe();return}
+   if(d&&Array.isArray(d.ideas)&&d.ideas.length===2){currentIdeas={source:'ai',ideas:d.ideas};choices()}
+   else{console.warn('AI応答の形式が不正のためデモに切替:',d);currentIdeas=DEMO_IDEAS;choices()}})
+ .catch(function(err){clearTimeout(timer);if(token!==aiToken||currentScreen!=='thinking')return;console.warn('AI接続失敗のためデモに切替:',err);currentIdeas=DEMO_IDEAS;choices()});
+}
+function choices(){currentScreen='choices';const A=currentIdeas.ideas[0],B=currentIdeas.ideas[1];render(`<div class="screen"><h2 class="prompt">${bi('Listen to two ideas.','ふたつの あんを きいてね')}</h2><div id="speechStatus" class="speaking-label">${bi('Getting ready...','せつめいの じゅんびちゅう')}</div><button class="btn secondary replay-choices" onclick="speakChoiceSequence()">${bi('🔊 Listen again','🔊 もういちど きく')}</button><div class="choices"><article id="choiceA" class="choice-card-static"><span class="number">1</span><strong>${A.emoji} ${bi(A.title_en,A.title_ja)}</strong><p><b>${bi('○ Good thing','○ いいところ')}</b><br>${bi(A.good_en,A.good_ja)}</p><p><b>${bi('△ Think about this','△ こんなときも')}</b><br>${bi(A.care_en,A.care_ja)}</p></article><article id="choiceB" class="choice-card-static"><span class="number">2</span><strong>${B.emoji} ${bi(B.title_en,B.title_ja)}</strong><p><b>${bi('○ Good thing','○ いいところ')}</b><br>${bi(B.good_en,B.good_ja)}</p><p><b>${bi('△ Think about this','△ こんなときも')}</b><br>${bi(B.care_en,B.care_ja)}</p></article></div><div class="choice-actions"><h3>${bi('Which do you choose?','さいごに どちらを えらぶ？')}</h3><div class="choose-buttons"><button class="btn primary" onclick="reason(0)">${A.emoji} ${bi('Choose: '+A.title_en,A.title_ja+' にする')}</button><button class="btn coral primary" onclick="reason(1)">${B.emoji} ${bi('Choose: '+B.title_en,B.title_ja+' にする')}</button></div></div></div>`);setTimeout(speakChoiceSequence,120)}
+function setChoiceFocus(id,status){for(const key of ['choiceA','choiceB']){const el=document.getElementById(key);if(el){el.classList.remove('speaking','done');if(id==='done')el.classList.add('done')}}const active=document.getElementById(id);if(active)active.classList.add('speaking');const label=document.getElementById('speechStatus');if(label){label.className='speaking-label'+(id==='choiceA'||id==='choiceB'?' active':'');label.innerHTML=status}}
+function speakPart(text,onend){currentText=text;if(!('speechSynthesis'in window)){onend&&onend();return}const u=new SpeechSynthesisUtterance(text);u.lang=english?'en-US':'ja-JP';u.rate=english?.74:.96;u.pitch=1.08;u.onend=()=>onend&&onend();u.onerror=()=>onend&&onend();speechSynthesis.speak(u)}
+function speakChoiceSequence(){const token=++choiceSpeechToken;if('speechSynthesis'in window)speechSynthesis.cancel();const A=currentIdeas.ideas[0],B=currentIdeas.ideas[1];const a=english?`Idea one. ${A.title_en}. Good thing. ${A.good_en} Think about this. ${A.care_en}`:`いちばん。${A.title_ja}。いいところは、${A.good_ja}。こんなときも かんがえよう。${A.care_ja}`;const b=english?`Idea two. ${B.title_en}. Good thing. ${B.good_en} Think about this. ${B.care_en}`:`にばん。${B.title_ja}。いいところは、${B.good_ja}。こんなときも かんがえよう。${B.care_ja}`;const q=english?'Now, which do you choose?':'ふたつの あんを きいたね。さいごに、どちらを えらぶ？';setChoiceFocus('choiceA',bi('Explaining idea 1','いま 1ばんを せつめいちゅう'));speakPart(a,()=>{if(token!==choiceSpeechToken)return;setChoiceFocus('choiceB',bi('Explaining idea 2','いま 2ばんを せつめいちゅう'));speakPart(b,()=>{if(token!==choiceSpeechToken)return;setChoiceFocus('done',bi('Choose below','したの ボタンで えらんでね'));speakPart(q)})})}
+function reason(i){currentScreen='reason';choiceSpeechToken++;const it=currentIdeas.ideas[i]||currentIdeas.ideas[0];const chosen=(it.emoji||'')+' '+(english?it.title_en:it.title_ja);render(`<div class="panel"><div class="heard">${chosen}</div>${robot}<h2>${bi('Why do you like it?','どうして それが いい？')}</h2><div class="row"><button class="btn coral primary" onclick="listen(true)">${bi('🎤 Tell me why','🎤 りゆうを はなす')}</button><button class="btn secondary" onclick="finish()">${bi('I do not know yet','まだ わからない')}</button></div></div>`);say(english?'Why do you like it?':'どうして それが いいと おもったのかな？')}
+function finish(){currentScreen='finish';const en='You thought and chose. You can change your mind later. Please tell your grown-up too.';const ja='じぶんで かんがえて えらべたね。あとで かんがえが かわっても いいよ。おうちの ひとにも はなしてみよう。';render(`<div class="panel">${robot}<h2>${bi('You thought and chose!','かんがえて えらべたね！')}</h2><p class="prompt" style="font-size:24px">${english?'You thought and chose.<br><small>じぶんで かんがえて えらべたね。</small><br>You can change your mind later.<br><small>あとで かんがえが かわっても いいよ。</small><br>Please tell your grown-up too.<br><small>おうちの ひとにも はなしてね。</small>':'じぶんで かんがえて えらべたね。<br>あとで かんがえが かわっても いいよ。<br>おうちの ひとにも はなしてみよう。'}</p><button class="btn primary" onclick="home()">${bi('↻ Start again','↻ はじめにもどる')}</button></div>`);say(english?en:ja)}
+function safe(){currentScreen='safe';const en='AI cannot decide this. It is not your fault. Please tell a grown-up near you now.';const ja='そのことは、AIだけでは きめられないよ。きみが わるいわけでは ないよ。ちかくにいる おとなに、いま はなしてね。';render(`<div class="panel safe"><div style="font-size:70px">🧑</div><h2>${bi('Tell a grown-up','おとなに はなしてね')}</h2><p class="prompt" style="font-size:25px">${english?'AI cannot decide this.<br><small>AIだけでは きめられないよ。</small><br>It is not your fault.<br><small>きみが わるいわけでは ないよ。</small><br><b>Tell a grown-up near you now.</b><br><small>ちかくの おとなに いま はなしてね。</small>':'そのことは、AIだけでは きめられないよ。<br>きみが わるいわけでは ないよ。<br><b>ちかくにいる おとなに、いま はなしてね。</b>'}</p><button class="btn primary" onclick="home()">${bi('Start again','はじめにもどる')}</button></div>`);say(english?en:ja)}
+function testChoices(){currentIdeas=DEMO_IDEAS;choices()}
+function showParent(){const mode=hasAI()?(english?'AI: connected (Gemini via GAS)':'AI接続：設定済み（Gemini・GAS経由）'):(english?'AI: not set (fixed demo)':'AI接続：未設定（固定デモで動作）');render(`<div class="panel" style="text-align:left"><h2>${english?'Parent test menu / 保護者用テストメニュー':'保護者用テストメニュー'}</h2><p><b>${mode}</b><br>${english?'Voice and conversation history are not saved. The API key is not in this app.<br><small>おんせい・かいわは ほぞんしません。</small>':'会話履歴・音声は保存しません。APIキーは本アプリ内に含まれません（GAS側で保管）。'}</p><div class="row"><button class="btn secondary" onclick="confirm(demoText())">${bi('Normal talk','通常会話')}</button><button class="btn secondary" onclick="testChoices()">${bi('Choices (demo)','選択画面(デモ)')}</button><button class="btn secondary" onclick="safe()">${bi('Safety reply','安全応答')}</button></div><ul><li>${bi('No text input','文字入力欄なし')}</li><li>${bi('Two choices','選択肢は2つ')}</li><li>${bi('AI does not decide','AIは最終判断をしない')}</li><li>${bi('Falls back to demo if AI fails','AI失敗時は固定デモに自動切替')}</li></ul><button class="btn primary" onclick="home()">${bi('Back to child screen','子ども画面にもどる')}</button></div>`)}
+function repeat(){if(currentScreen==='choices')speakChoiceSequence();else if(currentText)say(currentText)}function toggleEnglish(){english=!english;choiceSpeechToken++;aiToken++;if('speechSynthesis'in window)speechSynthesis.cancel();document.getElementById('lang').textContent=english?'にほんご':'English';document.getElementById('adultBtn').textContent=english?'Parent':'おとな';document.getElementById('repeatBtn').innerHTML=english?'↩️ Again<br><small>もういちど</small>':'↩️ もういちど';document.getElementById('appLabel').textContent=english?'Thinking AI　Rev 0.5 AI':'かんがえるAI　Rev 0.5 AI';document.getElementById('safetyNote').innerHTML=english?'AI can be wrong ・ You choose at the end<br><small>AIも まちがえるよ ・ さいごは じぶんで えらぼう</small>':'AIも まちがえることが あるよ　・　さいごは じぶんで えらぼう';home()}home();
+</script></body></html>
