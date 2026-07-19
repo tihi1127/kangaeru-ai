@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>かんがえるAI Rev 0.5 AI</title>
+<title>かんがえるAI Rev 0.6 Talk</title>
 <style>
 /* =====================================================
    かんがえるAI Rev 0.4 Design
@@ -188,7 +188,7 @@ h1 span:nth-child(5){margin-right:.3em}
 .heard{font-size:clamp(24px,3vw,32px);font-weight:900;background:#fff0b2;border-radius:24px;padding:22px;line-height:1.4}
 .row{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:8px}
 .btn{min-height:70px;border:0;border-radius:999px;padding:14px 30px;
-  font-size:22px;font-weight:900;line-height:1.25;
+  font-size:22px;font-weight:900;line-height:1.25;word-break:keep-all;
   box-shadow:0 6px 0 #b7924c55;transition:transform .1s,box-shadow .1s}
 .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #b7924c55}
 .primary{background:linear-gradient(180deg,#128078,var(--teal));color:#fff}
@@ -245,6 +245,7 @@ h1 span:nth-child(5){margin-right:.3em}
 @keyframes pulse{to{transform:scale(1.18)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important}}
 
+.theme-entry{position:relative;z-index:2;display:inline-block;margin:6px auto 0;min-height:58px;font-size:19px;padding:11px 28px}
 /* ---------- 12. PC中間サイズ ---------- */
 @media(max-width:980px){
   .hero{gap:24px}
@@ -339,52 +340,95 @@ h1 span:nth-child(5){margin-right:.3em}
 <div class="deco ground"></div>
 <div class="deco bush b1"></div><div class="deco bush b2"></div>
 <div class="deco flower f1"></div><div class="deco tulip t1"></div>
-<header class="top"><button id="adultBtn" class="adult" onclick="showParent()">おとな</button><small id="appLabel">かんがえるAI　Rev 0.5 AI</small><h1 aria-label="いっしょに かんがえよう"><span>い</span><span>っ</span><span>し</span><span>ょ</span><span>に</span><span>か</span><span>ん</span><span>が</span><span>え</span><span>よ</span><span>う</span></h1></header><section id="stage" class="stage"></section><nav class="bottom"><button id="repeatBtn" class="btn secondary" onclick="repeat()">↩️ もういちど</button><button class="btn secondary" onclick="toggleEnglish()">🌐 <span id="lang">English</span></button></nav><p id="safetyNote" class="note">AIも まちがえることが あるよ　・　さいごは じぶんで えらぼう</p></main>
+<header class="top"><button id="adultBtn" class="adult" onclick="showParent()">おとな</button><small id="appLabel">かんがえるAI　Rev 0.6 Talk</small><h1 aria-label="いっしょに かんがえよう"><span>い</span><span>っ</span><span>し</span><span>ょ</span><span>に</span><span>か</span><span>ん</span><span>が</span><span>え</span><span>よ</span><span>う</span></h1></header><section id="stage" class="stage"></section><nav class="bottom"><button id="repeatBtn" class="btn secondary" onclick="repeat()">↩️ もういちど</button><button class="btn secondary" onclick="toggleEnglish()">🌐 <span id="lang">English</span></button></nav><p id="safetyNote" class="note">AIも まちがえることが あるよ　・　さいごは じぶんで えらぼう</p></main>
 <script>
 //======= CONFIG（設定ブロック）ここだけ変更可 =======
 const APP_CONFIG={
-  GAS_URL:'https://script.google.com/macros/s/AKfycbyDEMebJaU_7MH9o1xp3gVHDsTDMYrgSQ0X-cHNb90-rPETocyIUNBIbIfvddfj3i_nzA/exec'  // 例: https://script.google.com/macros/s/XXXX/exec
+  GAS_URL:'https://script.google.com/macros/s/AKfycbyDEMebJaU_7MH9o1xp3gVHDsTDMYrgSQ0X-cHNb90-rPETocyIUNBIbIfvddfj3i_nzA/exec'
 };
 //======= CONFIG ここまで（以下は変更禁止） =======
 
-const stage=document.getElementById('stage');let english=false,currentText='',recognition=null,currentScreen='home',choiceSpeechToken=0,aiToken=0,lastQuestion='';const normalJa='あした なにをして あそべばいい？',normalEn='What should I play tomorrow?';
+const stage=document.getElementById('stage');let english=false,currentText='',recognition=null,currentScreen='home',choiceSpeechToken=0,aiToken=0,lastQuestion='',chosenIdea='',talkHistory=[],talkTurns=0,lastTheme='moshimo',themeIdx=0,currentOdai=null;const MAX_TALK_TURNS=10;const normalJa='あした なにをして あそべばいい？',normalEn='What should I play tomorrow?';
 const DANGER_WORDS=['しにたい','ころす','くすり','じゅうしょ','でんわばんごう','hurt myself','kill','medicine','address','phone number'];
 const DEMO_IDEAS={source:'demo',ideas:[
  {emoji:'🌳',title_ja:'こうえんで あそぶ',title_en:'Play outside',good_ja:'からだを たくさん うごかせるよ。',good_en:'You can move your body.',care_ja:'あめだと あそびにくいよ。',care_en:'Rain can make it hard.'},
  {emoji:'🎨',title_ja:'おうちで あそぶ',title_en:'Draw at home',good_ja:'えや ブロックで あそべるよ。',good_en:'You can draw or play with blocks.',care_ja:'うごく じかんは すくないよ。',care_en:'You may move less.'}]};
+const THEME_POOL={
+ moshimo:[{ja:'もしも そらを とべたら、どこへ いく？',en:'If you could fly, where would you go?'},{ja:'もしも どうぶつと はなせたら、なにを はなす？',en:'If you could talk to animals, what would you say?'}],
+ docchi:[{ja:'いぬと ねこ、どっちが すき？',en:'Dogs or cats, which do you like?'},{ja:'うみと やま、どっちに いきたい？',en:'Sea or mountains, which do you like?'}],
+ kyou:[{ja:'きょう いちばん たのしかった ことは なに？',en:'What was the most fun today?'},{ja:'あした なにを して あそびたい？',en:'What do you want to play tomorrow?'}]};
 let currentIdeas=DEMO_IDEAS;
 const robot='<div class="robot"><i class="antenna"></i><i class="spark"></i><i class="ear e-l"></i><i class="ear e-r"></i><div class="rhead"><div class="face"><i class="eye"></i><i class="eye"></i><b class="smile"></b></div></div><i class="arm a-l"></i><i class="arm a-r"></i><div class="rbody"><b class="heart"></b></div><i class="leg lg-l"></i><i class="leg lg-r"></i></div>';
-function demoText(){return english?normalEn:normalJa}function bi(en,ja){return english?`${en}<br><small>${ja}</small>`:ja}
+function robotSmall(){return '<div class="robot small">'+robot.replace('<div class="robot">','').replace(/<\/div>$/,'')+'</div>'}
+function demoText(){return english?normalEn:normalJa}function demoTalkText(){return english?'Because it is fun.':'たのしいから'}
+function bi(en,ja){return english?`${en}<br><small>${ja}</small>`:ja}
 function hasAI(){return typeof APP_CONFIG.GAS_URL==='string'&&APP_CONFIG.GAS_URL.indexOf('https://script.google.com')===0}
+function hasDangerWord(t){t=String(t||'').toLowerCase();return DANGER_WORDS.some(w=>t.includes(w))}
+function postAI(payload,ms){const ctrl=('AbortController'in window)?new AbortController():null;const timer=setTimeout(function(){if(ctrl)ctrl.abort()},ms||25000);return fetch(APP_CONFIG.GAS_URL,{method:'POST',body:JSON.stringify(payload),signal:ctrl?ctrl.signal:undefined}).then(function(r){clearTimeout(timer);return r.json()}).catch(function(e){clearTimeout(timer);throw e})}
 function say(text){currentText=text;if(!('speechSynthesis'in window))return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=english?'en-US':'ja-JP';u.rate=english?.78:1.0;u.pitch=1.08;speechSynthesis.speak(u)}
-function home(){choiceSpeechToken++;aiToken++;currentScreen='home';render(`<div class="screen"><h2 class="prompt">${english?'What do you want to talk about?<br>なにを はなしたい？':'きょうは なにを はなす？'}</h2><div class="hero"><button class="mic" onclick="listen(false)" aria-label="おして はなす"><div class="mic-symbol"><i class="m-u"></i><i class="m-cap"></i><i class="m-stem"></i><i class="m-base"></i></div><strong>${english?'Tap and talk<br>おして はなす':'おして はなす'}</strong></button>${robot}</div></div>`);currentText=english?'What do you want to talk about? なにを はなしたい？':'きょうは なにを はなす？'}
+function home(){choiceSpeechToken++;aiToken++;currentScreen='home';talkHistory=[];talkTurns=0;render(`<div class="screen"><h2 class="prompt">${english?'What do you want to talk about?<br>なにを はなしたい？':'きょうは なにを はなす？'}</h2><div class="hero"><button class="mic" onclick="listen(false)" aria-label="おして はなす"><div class="mic-symbol"><i class="m-u"></i><i class="m-cap"></i><i class="m-stem"></i><i class="m-base"></i></div><strong>${english?'Tap and talk<br>おして はなす':'おして はなす'}</strong></button>${robot}</div><button class="btn secondary theme-entry" onclick="themePick()">💡 ${bi('Get a topic','おだいを もらう')}</button></div>`);currentText=english?'What do you want to talk about? なにを はなしたい？':'きょうは なにを はなす？'}
 function render(html){stage.innerHTML=html}
-function listen(reason){currentScreen='listening';render(`<div class="panel"><div style="font-size:80px">〰️🎤〰️</div><h2>${bi('I am listening.','きいているよ')}</h2><p class="prompt">${bi('Speak slowly.','ゆっくり はなしてね')}</p><div class="row"><button class="btn coral primary" onclick="stopListen(${reason})">${bi('■ Stop','■ おわり')}</button><button class="btn secondary" onclick="${reason?'finish()':'confirm(demoText())'}">${bi('Try the demo','デモで すすむ')}</button></div></div>`);currentText=english?'I am listening. Speak slowly.':'きいているよ。ゆっくり はなしてね。';const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return;try{recognition=new R();recognition.lang=english?'en-US':'ja-JP';recognition.interimResults=false;recognition.onresult=e=>{const t=e.results[0][0].transcript;if(reason)finish();else if(DANGER_WORDS.some(w=>t.toLowerCase().includes(w)))safe();else confirm(t)};recognition.onerror=()=>{};recognition.start()}catch(e){recognition=null}}
-function stopListen(reason){if(recognition)try{recognition.stop()}catch(e){};reason?finish():confirm(demoText())}
-function confirm(text){currentScreen='confirm';lastQuestion=text;render(`<div class="panel"><div class="robot small">${robot.replace('<div class="robot">','').replace(/<\/div>$/,'')}</div><h2>${bi('I heard this.','こう きこえたよ')}</h2><div class="heard">“${text}”</div><br><div class="row"><button class="btn primary" onclick="goChoices()">${bi('○ Yes','○ あってる')}</button><button class="btn secondary" onclick="listen(false)">${bi('↻ Again','↻ もういちど')}</button></div></div>`);say(english?'I heard this. '+text:'こう きこえたよ。'+text)}
-function thinking(){currentScreen='thinking';render(`<div class="panel"><div class="robot small">${robot.replace('<div class="robot">','').replace(/<\/div>$/,'')}</div><h2>${bi('Let me think...','かんがえて いるよ')}</h2><div class="speaking-label active">${bi('Please wait','ちょっと まってね')}</div></div>`);say(english?'Let me think. Please wait.':'かんがえて いるよ。ちょっと まってね。')}
+function listen(mode){currentScreen='listening';const isTalk=(mode==='talk');render(`<div class="panel"><div style="font-size:80px">〰️🎤〰️</div><h2>${bi('I am listening.','きいているよ')}</h2><p class="prompt">${bi('Speak slowly.','ゆっくり はなしてね')}</p><div class="row"><button class="btn coral primary" onclick="stopListen(${isTalk?"'talk'":mode})">${bi('■ Stop','■ おわり')}</button><button class="btn secondary" onclick="${isTalk?'kidSaid(demoTalkText())':(mode?'finish()':'confirm(demoText())')}">${bi('Try the demo','デモで すすむ')}</button></div></div>`);currentText=english?'I am listening. Speak slowly.':'きいているよ。ゆっくり はなしてね。';const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return;try{recognition=new R();recognition.lang=english?'en-US':'ja-JP';recognition.interimResults=false;recognition.onresult=e=>{const t=e.results[0][0].transcript;if(isTalk)kidSaid(t);else if(mode)finish();else if(hasDangerWord(t))safe();else confirm(t)};recognition.onerror=()=>{};recognition.start()}catch(e){recognition=null}}
+function stopListen(mode){if(recognition)try{recognition.stop()}catch(e){};if(mode==='talk')endTalk();else if(mode)finish();else confirm(demoText())}
+function confirm(text){currentScreen='confirm';lastQuestion=text;render(`<div class="panel">${robotSmall()}<h2>${bi('I heard this.','こう きこえたよ')}</h2><div class="heard">“${text}”</div><br><div class="row"><button class="btn primary" onclick="goChoices()">${bi('○ Yes','○ あってる')}</button><button class="btn secondary" onclick="listen(false)">${bi('↻ Again','↻ もういちど')}</button></div></div>`);say(english?'I heard this. '+text:'こう きこえたよ。'+text)}
+function thinking(){currentScreen='thinking';render(`<div class="panel">${robotSmall()}<h2>${bi('Let me think...','かんがえて いるよ')}</h2><div class="speaking-label active">${bi('Please wait','ちょっと まってね')}</div></div>`);say(english?'Let me think. Please wait.':'かんがえて いるよ。ちょっと まってね。')}
 function goChoices(){
  if(!hasAI()){currentIdeas=DEMO_IDEAS;choices();return}
  thinking();
  const token=++aiToken;
- const ctrl=('AbortController'in window)?new AbortController():null;
- const timer=setTimeout(function(){if(ctrl)ctrl.abort()},25000);
- fetch(APP_CONFIG.GAS_URL,{method:'POST',body:JSON.stringify({question:lastQuestion}),signal:ctrl?ctrl.signal:undefined})
- .then(function(r){return r.json()})
- .then(function(d){clearTimeout(timer);if(token!==aiToken||currentScreen!=='thinking')return;
+ postAI({mode:'ideas',question:lastQuestion},25000)
+ .then(function(d){if(token!==aiToken||currentScreen!=='thinking')return;
    if(d&&d.danger){safe();return}
    if(d&&Array.isArray(d.ideas)&&d.ideas.length===2){currentIdeas={source:'ai',ideas:d.ideas};choices()}
    else{console.warn('AI応答の形式が不正のためデモに切替:',d);currentIdeas=DEMO_IDEAS;choices()}})
- .catch(function(err){clearTimeout(timer);if(token!==aiToken||currentScreen!=='thinking')return;console.warn('AI接続失敗のためデモに切替:',err);currentIdeas=DEMO_IDEAS;choices()});
+ .catch(function(err){if(token!==aiToken||currentScreen!=='thinking')return;console.warn('AI接続失敗のためデモに切替:',err);currentIdeas=DEMO_IDEAS;choices()});
 }
 function choices(){currentScreen='choices';const A=currentIdeas.ideas[0],B=currentIdeas.ideas[1];render(`<div class="screen"><h2 class="prompt">${bi('Listen to two ideas.','ふたつの あんを きいてね')}</h2><div id="speechStatus" class="speaking-label">${bi('Getting ready...','せつめいの じゅんびちゅう')}</div><button class="btn secondary replay-choices" onclick="speakChoiceSequence()">${bi('🔊 Listen again','🔊 もういちど きく')}</button><div class="choices"><article id="choiceA" class="choice-card-static"><span class="number">1</span><strong>${A.emoji} ${bi(A.title_en,A.title_ja)}</strong><p><b>${bi('○ Good thing','○ いいところ')}</b><br>${bi(A.good_en,A.good_ja)}</p><p><b>${bi('△ Think about this','△ こんなときも')}</b><br>${bi(A.care_en,A.care_ja)}</p></article><article id="choiceB" class="choice-card-static"><span class="number">2</span><strong>${B.emoji} ${bi(B.title_en,B.title_ja)}</strong><p><b>${bi('○ Good thing','○ いいところ')}</b><br>${bi(B.good_en,B.good_ja)}</p><p><b>${bi('△ Think about this','△ こんなときも')}</b><br>${bi(B.care_en,B.care_ja)}</p></article></div><div class="choice-actions"><h3>${bi('Which do you choose?','さいごに どちらを えらぶ？')}</h3><div class="choose-buttons"><button class="btn primary" onclick="reason(0)">${A.emoji} ${bi('Choose: '+A.title_en,A.title_ja+' にする')}</button><button class="btn coral primary" onclick="reason(1)">${B.emoji} ${bi('Choose: '+B.title_en,B.title_ja+' にする')}</button></div></div></div>`);setTimeout(speakChoiceSequence,120)}
 function setChoiceFocus(id,status){for(const key of ['choiceA','choiceB']){const el=document.getElementById(key);if(el){el.classList.remove('speaking','done');if(id==='done')el.classList.add('done')}}const active=document.getElementById(id);if(active)active.classList.add('speaking');const label=document.getElementById('speechStatus');if(label){label.className='speaking-label'+(id==='choiceA'||id==='choiceB'?' active':'');label.innerHTML=status}}
 function speakPart(text,onend){currentText=text;if(!('speechSynthesis'in window)){onend&&onend();return}const u=new SpeechSynthesisUtterance(text);u.lang=english?'en-US':'ja-JP';u.rate=english?.74:.96;u.pitch=1.08;u.onend=()=>onend&&onend();u.onerror=()=>onend&&onend();speechSynthesis.speak(u)}
 function speakChoiceSequence(){const token=++choiceSpeechToken;if('speechSynthesis'in window)speechSynthesis.cancel();const A=currentIdeas.ideas[0],B=currentIdeas.ideas[1];const a=english?`Idea one. ${A.title_en}. Good thing. ${A.good_en} Think about this. ${A.care_en}`:`いちばん。${A.title_ja}。いいところは、${A.good_ja}。こんなときも かんがえよう。${A.care_ja}`;const b=english?`Idea two. ${B.title_en}. Good thing. ${B.good_en} Think about this. ${B.care_en}`:`にばん。${B.title_ja}。いいところは、${B.good_ja}。こんなときも かんがえよう。${B.care_ja}`;const q=english?'Now, which do you choose?':'ふたつの あんを きいたね。さいごに、どちらを えらぶ？';setChoiceFocus('choiceA',bi('Explaining idea 1','いま 1ばんを せつめいちゅう'));speakPart(a,()=>{if(token!==choiceSpeechToken)return;setChoiceFocus('choiceB',bi('Explaining idea 2','いま 2ばんを せつめいちゅう'));speakPart(b,()=>{if(token!==choiceSpeechToken)return;setChoiceFocus('done',bi('Choose below','したの ボタンで えらんでね'));speakPart(q)})})}
-function reason(i){currentScreen='reason';choiceSpeechToken++;const it=currentIdeas.ideas[i]||currentIdeas.ideas[0];const chosen=(it.emoji||'')+' '+(english?it.title_en:it.title_ja);render(`<div class="panel"><div class="heard">${chosen}</div>${robot}<h2>${bi('Why do you like it?','どうして それが いい？')}</h2><div class="row"><button class="btn coral primary" onclick="listen(true)">${bi('🎤 Tell me why','🎤 りゆうを はなす')}</button><button class="btn secondary" onclick="finish()">${bi('I do not know yet','まだ わからない')}</button></div></div>`);say(english?'Why do you like it?':'どうして それが いいと おもったのかな？')}
-function finish(){currentScreen='finish';const en='You thought and chose. You can change your mind later. Please tell your grown-up too.';const ja='じぶんで かんがえて えらべたね。あとで かんがえが かわっても いいよ。おうちの ひとにも はなしてみよう。';render(`<div class="panel">${robot}<h2>${bi('You thought and chose!','かんがえて えらべたね！')}</h2><p class="prompt" style="font-size:24px">${english?'You thought and chose.<br><small>じぶんで かんがえて えらべたね。</small><br>You can change your mind later.<br><small>あとで かんがえが かわっても いいよ。</small><br>Please tell your grown-up too.<br><small>おうちの ひとにも はなしてね。</small>':'じぶんで かんがえて えらべたね。<br>あとで かんがえが かわっても いいよ。<br>おうちの ひとにも はなしてみよう。'}</p><button class="btn primary" onclick="home()">${bi('↻ Start again','↻ はじめにもどる')}</button></div>`);say(english?en:ja)}
-function safe(){currentScreen='safe';const en='AI cannot decide this. It is not your fault. Please tell a grown-up near you now.';const ja='そのことは、AIだけでは きめられないよ。きみが わるいわけでは ないよ。ちかくにいる おとなに、いま はなしてね。';render(`<div class="panel safe"><div style="font-size:70px">🧑</div><h2>${bi('Tell a grown-up','おとなに はなしてね')}</h2><p class="prompt" style="font-size:25px">${english?'AI cannot decide this.<br><small>AIだけでは きめられないよ。</small><br>It is not your fault.<br><small>きみが わるいわけでは ないよ。</small><br><b>Tell a grown-up near you now.</b><br><small>ちかくの おとなに いま はなしてね。</small>':'そのことは、AIだけでは きめられないよ。<br>きみが わるいわけでは ないよ。<br><b>ちかくにいる おとなに、いま はなしてね。</b>'}</p><button class="btn primary" onclick="home()">${bi('Start again','はじめにもどる')}</button></div>`);say(english?en:ja)}
+function reason(i){currentScreen='reason';choiceSpeechToken++;const it=currentIdeas.ideas[i]||currentIdeas.ideas[0];chosenIdea=english?it.title_en:it.title_ja;talkHistory=[];talkTurns=0;const chosen=(it.emoji||'')+' '+(english?it.title_en:it.title_ja);render(`<div class="panel"><div class="heard">${chosen}</div>${robot}<h2>${bi('Why do you like it?','どうして それが いい？')}</h2><div class="row"><button class="btn coral primary" onclick="listen('talk')">${bi('🎤 Tell me why','🎤 りゆうを はなす')}</button><button class="btn secondary" onclick="finish()">${bi('I do not know yet','まだ わからない')}</button></div></div>`);say(english?'Why do you like it?':'どうして それが いいと おもったのかな？')}
+function kidSaid(t){
+ if(hasDangerWord(t)){safe();return}
+ talkHistory.push({who:'kid',text:String(t).slice(0,200)});talkTurns++;
+ if(!hasAI()||talkTurns>=MAX_TALK_TURNS){endTalk();return}
+ thinking();
+ const token=++aiToken;
+ postAI({mode:'talk',question:lastQuestion,choice:chosenIdea,history:talkHistory},20000)
+ .then(function(d){if(token!==aiToken||currentScreen!=='thinking')return;
+   if(d&&d.danger){safe();return}
+   if(d&&d.reply_ja&&d.ask_ja){talkHistory.push({who:'ai',text:d.reply_ja+' '+d.ask_ja});talkScreen(d)}
+   else{console.warn('talk応答が不正、まとめに移行:',d);endTalk()}})
+ .catch(function(err){if(token!==aiToken||currentScreen!=='thinking')return;console.warn('talk接続失敗、まとめに移行:',err);endTalk()});
+}
+function talkScreen(d){currentScreen='talk';render(`<div class="panel">${robotSmall()}<div class="heard" style="font-size:clamp(19px,5vw,24px)">${bi(d.reply_en,d.reply_ja)}</div><h2 class="prompt" style="font-size:clamp(21px,5.6vw,30px);margin-top:14px">${bi(d.ask_en,d.ask_ja)}</h2><div class="row"><button class="btn coral primary" onclick="listen('talk')">${bi('🎤 Answer','🎤 こたえる')}</button><button class="btn secondary" onclick="endTalk()">${bi('Finish','おしまいに する')}</button></div></div>`);say(english?(d.reply_en+' '+d.ask_en):(d.reply_ja+' '+d.ask_ja))}
+function endTalk(){
+ if(!hasAI()||!talkHistory.some(function(x){return x.who==='kid'})){finish();return}
+ thinking();
+ const token=++aiToken;
+ postAI({mode:'wrap',question:lastQuestion,choice:chosenIdea,history:talkHistory},20000)
+ .then(function(d){if(token!==aiToken||currentScreen!=='thinking')return;
+   if(d&&d.danger){safe();return}
+   if(d&&d.wrap_ja){finishWrap(d)}else{finish()}})
+ .catch(function(){if(token!==aiToken||currentScreen!=='thinking')return;finish()});
+}
+function finishWrap(d){currentScreen='finish';talkHistory=[];const pj='おうちの ひとにも はなしてみよう。',pe='Please tell your grown-up too.';render(`<div class="panel">${robot}<h2>${bi('You thought and chose!','かんがえて えらべたね！')}</h2><p class="prompt" style="font-size:24px">${english?`${d.wrap_en}<br><small>${d.wrap_ja}</small><br>${pe}<br><small>${pj}</small>`:`${d.wrap_ja}<br><b>${pj}</b>`}</p><button class="btn primary" onclick="home()">${bi('↻ Start again','↻ はじめにもどる')}</button></div>`);say(english?(d.wrap_en+' '+pe):(d.wrap_ja+' '+pj))}
+function finish(){currentScreen='finish';talkHistory=[];const en='You thought and chose. You can change your mind later. Please tell your grown-up too.';const ja='じぶんで かんがえて えらべたね。あとで かんがえが かわっても いいよ。おうちの ひとにも はなしてみよう。';render(`<div class="panel">${robot}<h2>${bi('You thought and chose!','かんがえて えらべたね！')}</h2><p class="prompt" style="font-size:24px">${english?'You thought and chose.<br><small>じぶんで かんがえて えらべたね。</small><br>You can change your mind later.<br><small>あとで かんがえが かわっても いいよ。</small><br>Please tell your grown-up too.<br><small>おうちの ひとにも はなしてね。</small>':'じぶんで かんがえて えらべたね。<br>あとで かんがえが かわっても いいよ。<br>おうちの ひとにも はなしてみよう。'}</p><button class="btn primary" onclick="home()">${bi('↻ Start again','↻ はじめにもどる')}</button></div>`);say(english?en:ja)}
+function safe(){currentScreen='safe';talkHistory=[];const en='AI cannot decide this. It is not your fault. Please tell a grown-up near you now.';const ja='そのことは、AIだけでは きめられないよ。きみが わるいわけでは ないよ。ちかくにいる おとなに、いま はなしてね。';render(`<div class="panel safe"><div style="font-size:70px">🧑</div><h2>${bi('Tell a grown-up','おとなに はなしてね')}</h2><p class="prompt" style="font-size:25px">${english?'AI cannot decide this.<br><small>AIだけでは きめられないよ。</small><br>It is not your fault.<br><small>きみが わるいわけでは ないよ。</small><br><b>Tell a grown-up near you now.</b><br><small>ちかくの おとなに いま はなしてね。</small>':'そのことは、AIだけでは きめられないよ。<br>きみが わるいわけでは ないよ。<br><b>ちかくにいる おとなに、いま はなしてね。</b>'}</p><button class="btn primary" onclick="home()">${bi('Start again','はじめにもどる')}</button></div>`);say(english?en:ja)}
+function themePick(){currentScreen='theme';choiceSpeechToken++;render(`<div class="panel"><h2>${bi('Pick a topic','どんな おだいに する？')}</h2><div class="choose-buttons" style="margin-top:6px"><button class="btn secondary" onclick="askTheme('moshimo')">🪄 ${bi('What if...','もしもクイズ')}</button><button class="btn secondary" onclick="askTheme('docchi')">🍓 ${bi('Which one?','どっちが すき？')}</button><button class="btn secondary" onclick="askTheme('kyou')">☀️ ${bi('Today','きょうの できごと')}</button></div><br><button class="btn primary" onclick="home()">${bi('↻ Back','↻ もどる')}</button></div>`);say(english?'Pick a topic.':'どんな おだいに する？')}
+function themeFromPool(t){const p=THEME_POOL[t]||THEME_POOL.moshimo;const o=p[themeIdx++%p.length];confirmTheme(o.ja,o.en)}
+function askTheme(t){lastTheme=t;
+ if(!hasAI()){themeFromPool(t);return}
+ thinking();
+ const token=++aiToken;
+ postAI({mode:'theme',theme:t},20000)
+ .then(function(d){if(token!==aiToken||currentScreen!=='thinking')return;
+   if(d&&d.q_ja){confirmTheme(d.q_ja,d.q_en||d.q_ja)}else{themeFromPool(t)}})
+ .catch(function(){if(token!==aiToken||currentScreen!=='thinking')return;themeFromPool(t)});
+}
+function confirmTheme(ja,en){currentScreen='confirmTheme';currentOdai={ja:ja,en:en};render(`<div class="panel">${robotSmall()}<h2>${bi('How about this?','こんな おだいは どう？')}</h2><div class="heard">${bi(en,ja)}</div><br><div class="row"><button class="btn primary" onclick="acceptTheme()">${bi('○ Yes!','○ これに する')}</button><button class="btn secondary" onclick="askTheme(lastTheme)">${bi('↻ Another','↻ ちがう おだい')}</button></div></div>`);say(english?('How about this? '+en):('こんな おだいは どう？ '+ja))}
+function acceptTheme(){lastQuestion=english?currentOdai.en:currentOdai.ja;goChoices()}
 function testChoices(){currentIdeas=DEMO_IDEAS;choices()}
-function showParent(){const mode=hasAI()?(english?'AI: connected (Gemini via GAS)':'AI接続：設定済み（Gemini・GAS経由）'):(english?'AI: not set (fixed demo)':'AI接続：未設定（固定デモで動作）');render(`<div class="panel" style="text-align:left"><h2>${english?'Parent test menu / 保護者用テストメニュー':'保護者用テストメニュー'}</h2><p><b>${mode}</b><br>${english?'Voice and conversation history are not saved. The API key is not in this app.<br><small>おんせい・かいわは ほぞんしません。</small>':'会話履歴・音声は保存しません。APIキーは本アプリ内に含まれません（GAS側で保管）。'}</p><div class="row"><button class="btn secondary" onclick="confirm(demoText())">${bi('Normal talk','通常会話')}</button><button class="btn secondary" onclick="testChoices()">${bi('Choices (demo)','選択画面(デモ)')}</button><button class="btn secondary" onclick="safe()">${bi('Safety reply','安全応答')}</button></div><ul><li>${bi('No text input','文字入力欄なし')}</li><li>${bi('Two choices','選択肢は2つ')}</li><li>${bi('AI does not decide','AIは最終判断をしない')}</li><li>${bi('Falls back to demo if AI fails','AI失敗時は固定デモに自動切替')}</li></ul><button class="btn primary" onclick="home()">${bi('Back to child screen','子ども画面にもどる')}</button></div>`)}
-function repeat(){if(currentScreen==='choices')speakChoiceSequence();else if(currentText)say(currentText)}function toggleEnglish(){english=!english;choiceSpeechToken++;aiToken++;if('speechSynthesis'in window)speechSynthesis.cancel();document.getElementById('lang').textContent=english?'にほんご':'English';document.getElementById('adultBtn').textContent=english?'Parent':'おとな';document.getElementById('repeatBtn').innerHTML=english?'↩️ Again<br><small>もういちど</small>':'↩️ もういちど';document.getElementById('appLabel').textContent=english?'Thinking AI　Rev 0.5 AI':'かんがえるAI　Rev 0.5 AI';document.getElementById('safetyNote').innerHTML=english?'AI can be wrong ・ You choose at the end<br><small>AIも まちがえるよ ・ さいごは じぶんで えらぼう</small>':'AIも まちがえることが あるよ　・　さいごは じぶんで えらぼう';home()}home();
+function showParent(){const mode=hasAI()?(english?'AI: connected (Gemini via GAS)':'AI接続：設定済み（Gemini・GAS経由）'):(english?'AI: not set (fixed demo)':'AI接続：未設定（固定デモで動作）');render(`<div class="panel" style="text-align:left"><h2>${english?'Parent test menu / 保護者用テストメニュー':'保護者用テストメニュー'}</h2><p><b>${mode}</b><br>${english?'Voice and conversation history are not saved. The API key is not in this app.<br><small>おんせい・かいわは ほぞんしません。</small>':'会話履歴・音声は保存しません（対話の記憶は画面を閉じると消えます）。APIキーは本アプリ内に含まれません（GAS側で保管）。'}</p><div class="row"><button class="btn secondary" onclick="confirm(demoText())">${bi('Normal talk','通常会話')}</button><button class="btn secondary" onclick="testChoices()">${bi('Choices (demo)','選択画面(デモ)')}</button><button class="btn secondary" onclick="themePick()">${bi('Topics','おだい選択')}</button><button class="btn secondary" onclick="safe()">${bi('Safety reply','安全応答')}</button></div><ul><li>${bi('No text input','文字入力欄なし')}</li><li>${bi('AI does not decide','AIは最終判断をしない')}</li><li>${bi('Talk loop: max 10 turns','ほりさげ対話は最大10往復で自動終了')}</li><li>${bi('Falls back to demo if AI fails','AI失敗時は固定内容に自動切替')}</li></ul><button class="btn primary" onclick="home()">${bi('Back to child screen','子ども画面にもどる')}</button></div>`)}
+function repeat(){if(currentScreen==='choices')speakChoiceSequence();else if(currentText)say(currentText)}function toggleEnglish(){english=!english;choiceSpeechToken++;aiToken++;if('speechSynthesis'in window)speechSynthesis.cancel();document.getElementById('lang').textContent=english?'にほんご':'English';document.getElementById('adultBtn').textContent=english?'Parent':'おとな';document.getElementById('repeatBtn').innerHTML=english?'↩️ Again<br><small>もういちど</small>':'↩️ もういちど';document.getElementById('appLabel').textContent=english?'Thinking AI　Rev 0.6 Talk':'かんがえるAI　Rev 0.6 Talk';document.getElementById('safetyNote').innerHTML=english?'AI can be wrong ・ You choose at the end<br><small>AIも まちがえるよ ・ さいごは じぶんで えらぼう</small>':'AIも まちがえることが あるよ　・　さいごは じぶんで えらぼう';home()}home();
 </script></body></html>
